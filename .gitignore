@@ -1,0 +1,10 @@
+.DS_Store
+.nyc_output
+lambda-messenger-template.yaml
+node_modules
+config/serviceAccountKey.json
+config/config.json
+*.zip
+config/lambda-messenger.template.yaml
+config/firebase-config.js
+schema.json

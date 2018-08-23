@@ -1,0 +1,44 @@
+type Conversation {
+	messages: [Message]!
+	users: [User]!
+	conversationId: String!
+}
+
+type Message {
+	message: String!
+	sender: String!
+	timestamp: String!
+	conversationId: String!
+}
+
+type Mutation {
+	registerUserWithPhoneNumber: User
+	registerUserWithEmail: User
+	postMessage(conversationId: String!, message: String!): Message
+	initiateConversation(others: [String]): String!
+}
+
+type Query {
+	lookupUserByPhoneNumber(phoneNumber: String!): User
+	lookupUserByEmail(email: String!): User
+	getConversation(conversationId: String!, since: String): Conversation!
+	getConversationHistory: [Conversation]
+}
+
+type Subscription {
+	newMessage(conversationId: String!): Message
+		@aws_subscribe(mutations: ["postMessage"])
+}
+
+type User {
+	userId: ID!
+	displayName: String!
+	phoneNumber: String
+	email: String
+}
+
+schema {
+	query: Query
+	mutation: Mutation
+	subscription: Subscription
+}

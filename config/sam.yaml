@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Resources:
+  postMessage:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: postMessage
+      Handler: index.postMessage
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+  getConversation:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: getConversation
+      Handler: index.getConversation
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+  getConversationHistory:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: getConversationHistory
+      Handler: index.getConversationHistory
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+  initiateConversation:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: initiateConversation
+      Handler: index.initiateConversation
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+  registerUserWithPhoneNumber:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: registerUserWithPhoneNumber
+      Handler: index.registerUserWithPhoneNumber
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+  registerUserWithEmail:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: registerUserWithEmail
+      Handler: index.registerUserWithEmail
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+
+  lookupUserByPhoneNumber:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: lookupUserByPhoneNumber
+      Handler: index.lookupUserByPhoneNumber
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+  lookupUserByEmail:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: lookupUserByEmail
+      Handler: index.lookupUserByEmail
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
+Parameters:
+  CodeKey:
+    Type: String
+  BucketName:
+    Type: String
+  LambdaRole:
+    Type: String

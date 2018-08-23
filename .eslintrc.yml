@@ -1,0 +1,24 @@
+extends: airbnb-base
+
+globals:
+  it: true
+  describe: true
+  before: true
+  after: true
+  beforeEach: true
+  afterEach: true
+
+rules:
+  padded-blocks: off
+  arrow-body-style: off
+  space-before-function-paren: off
+  newline-per-chained-call: off
+
+overrides:
+  files:
+    - 'utils/*.js'
+    - 'tests/*.js'
+    - 'runfile.js'
+  rules:
+    import/no-extraneous-dependencies: off
+    no-console: off

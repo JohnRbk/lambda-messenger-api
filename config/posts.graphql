@@ -1,0 +1,71 @@
+fragment conversationFields on Conversation {
+  messages {
+    message,
+    sender,
+    timestamp
+  },
+  conversationId,
+  users {
+    userId, displayName, email, phoneNumber
+  }
+}
+
+subscription newMessage($conversationId: String!) {
+  newMessage(conversationId: $conversationId) {
+    message,sender,timestamp,conversationId
+  }
+}
+
+mutation registerUserWithEmail{
+  registerUserWithEmail {
+    userId,
+    displayName,
+    email
+  }
+}
+
+mutation registerUserWithPhoneNumber{
+  registerUserWithPhoneNumber {
+    userId,
+    displayName,
+    phoneNumber
+  }
+}
+
+mutation postMessage($conversationId: String!, $message: String!) {
+	postMessage(conversationId: $conversationId, message: $message){
+		message,sender,timestamp,conversationId
+	}
+}
+
+mutation initiateConversation($others:[String]) {
+  initiateConversation(others: $others)
+}
+
+query getConversation($conversationId: String!, $since: String) {
+	getConversation(conversationId: $conversationId, since: $since) {
+		...conversationFields
+	}
+}
+
+query lookupUserByPhoneNumber($phoneNumber: String!) {
+	lookupUserByPhoneNumber(phoneNumber: $phoneNumber){
+    userId,
+    displayName,
+    phoneNumber
+	}
+}
+
+query lookupUserByEmail($email: String!) {
+	lookupUserByEmail(email: $email){
+    userId,
+    displayName,
+    email
+	}
+}
+
+query getConversationHistory {
+	getConversationHistory {
+    ...conversationFields
+	}
+}

@@ -1,0 +1,7 @@
+{
+  "LAMBDA_IAM_ROLE": "arn:aws:iam::XXXXXX:role/XXXXXXXXX",
+  "CLOUDFORMATION_LAMBDA_STACK_NAME": "lambda-messenger-apis",
+  "LAMBDA_PACKAGE_S3_BUCKET": "lambda-messenger",
+  "APPSYNC_API_ID": "XXXXXXXXXXXXX",
+  "APPSYNC_ENDPOINT_URL": "https://XXXXXXXXXXXX.appsync-api.XXXXXXXXX.amazonaws.com/graphql"
+}
