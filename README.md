@@ -4,7 +4,7 @@ LambdaMessenger is a prototype for a serverless chat app using AWS AppSync, Node
 
 The programming model is fairly simple:
 
-1. Users can register with an email or phone number (via [Firebase Authentication](https://firebase.google.com/docs/auth/)) 
+1. Users can register with an email or phone number (via [Firebase Authentication](https://firebase.google.com/docs/auth/))
 2. Users can initiate a conversation with someone else
 3. Users can post messages to the conversation. All other participants of that conversation can retrieve updates via the `getConversation` API or in realtime using [GraphQL Subscriptions](https://docs.aws.amazon.com/appsync/latest/devguide/real-time-data.html).
 
@@ -22,8 +22,8 @@ LambdaMessenger is fully serverless, so a number of configuration steps are need
 ### Config.json
 
 The main settings for this project need to be specified in the `config/config.json` file. Use the `api/config.sample.json` as a baseline and rename it. You'll need to update this with your specific AWS and Firebase
- settings. 
- 
+ settings.
+
 ```json
 {
   "LAMBDA_IAM_ROLE": "arn:aws:iam::XXXXXX:role/XXXXXXXXX",
@@ -37,7 +37,7 @@ The main settings for this project need to be specified in the `config/config.js
 ### Configuring Firebase & AWS
 1. [Configure Firebase](docs/FIREBASE.md)
 2. [Create an AWS IAM Role](docs/AWS-IAM.md)
-3. [Create the AWS DynamoDB Tables] (docs/AWS-DYNAMODB.md)
+3. [Create the AWS DynamoDB Tables](docs/AWS-DYNAMODB.md)
 4. [Deploy AWS Lambda Functions](docs/AWS-LAMBDA.md)
 5. [Configure AWS AppSync](docs/AWS-APPSYNC.md)
 
@@ -65,5 +65,4 @@ npx runjs all # installs (or updates) the AWS lambda functions
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) file for details
