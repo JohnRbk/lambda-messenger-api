@@ -31,7 +31,8 @@ function zip() {
   const ts = new Date().toISOString().replace(/[:\.]/g, '-');
   const zipfile = `lambda-package-${ts}.zip`;
   console.log(`Zipping file ${zipfile} ...`);
-  run(`zip -q -r ${zipfile} index.js api.js node_modules/*`);
+  run(`zip -q -r ${zipfile} node_modules/*`);
+  run(`zip -q -j ${zipfile} src/index.js src/api.js`);
   return zipfile;
 }
 
@@ -66,7 +67,7 @@ function getAppsyncSchema() {
 function generateClientStubs() {
   getAppsyncSchema();
   run(
-    'aws-appsync-codegen generate posts.graphql --schema schema.json --output API.swift --target swift',
+    'aws-appsync-codegen generate config/posts.graphql --schema schema.json --output API.swift --target swift',
   );
 }
 
@@ -74,7 +75,7 @@ function sam() {
   run(
     `aws cloudformation package \
     --force-upload \
-    --template-file sam.yaml \
+    --template-file config/sam.yaml \
     --s3-bucket ${config.LAMBDA_PACKAGE_S3_BUCKET} \
     --output-template-file lambda-messenger-template.yaml`,
   );

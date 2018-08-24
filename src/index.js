@@ -9,6 +9,10 @@ exports.postMessage = async function(event, context) {
   );
 };
 
+exports.updateUser = async function(event, context) {
+  return api.updateUser(event.user.userId, event.arguments.displayName);
+};
+
 exports.registerUserWithPhoneNumber = async function(event, context) {
   return api.registerUserWithPhoneNumber(
     event.user.userId,
@@ -46,5 +50,9 @@ exports.getConversationHistory = async function(event, context) {
 };
 
 exports.initiateConversation = async function(event, context) {
-  return api.initiateConversation(event.user.userId, event.arguments.others);
+  return api.initiateConversation(
+    event.user.userId,
+    event.arguments.others,
+    event.arguments.message,
+  );
 };

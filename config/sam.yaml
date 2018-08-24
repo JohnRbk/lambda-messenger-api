@@ -23,6 +23,17 @@ Resources:
         Bucket: !Ref BucketName
         Key: !Ref CodeKey
 
+  updateUser:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: updateUser
+      Handler: index.updateUser
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref CodeKey
+
   getConversationHistory:
     Type: 'AWS::Serverless::Function'
     Properties:

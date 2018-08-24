@@ -220,27 +220,74 @@ async function existingConversationIdAmongstUsers(users) {
 
 }
 
+/**
+* Posts a mesage from the sender to the group participating in the
+* conversation.
+*/
+async function postMessage(conversationId, sender, message, ts = undefined) {
+
+  const timestamp = !ts ? new Date().toISOString() : ts;
+
+  if (!sender) {
+    return Promise.reject(Error('sender must be set'));
+  }
+
+  const params = {
+    TableName: 'messages',
+    Item: {
+      conversationId,
+      timestamp,
+      message,
+      sender,
+    },
+  };
+
+  const user = await getUser(sender);
+  if (!user) {
+    throw new Error('Sender is not valid');
+  }
+
+  const conversationIds = await getConversationIds(user.userId);
+  if (conversationIds.includes(conversationId) === false) {
+    return Promise.reject(Error('Sender is not part of the conversation'));
+  }
+
+  return docClient.put(params).promise().then(() => ({
+    conversationId,
+    message,
+    sender,
+    timestamp,
+  }));
+
+}
+
 /*
 * Generates a conversation id that is shared by the user and others. This allows
 * the group to post messages to one another.
 */
-async function initiateConversation(userId, others) {
-  const cid = uuidv1();
+async function initiateConversation(userId, others, message) {
 
-  if (typeof userId !== 'string') {
-    return Promise.reject(Error(`initiateConversation requires userId string parameter but had ${userId} instead`));
+  if (!userId || !message) {
+    return Promise.reject(Error('Invalid parameters to call initiateConversation'));
   }
 
   if (Array.isArray(others) === false) {
     return Promise.reject(Error('initiateConversation requires array'));
   }
 
+  const allUsersValid = await validateUserIds([userId, ...others]);
+  if (allUsersValid === false) {
+    return Promise.reject(Error('UserIds not valid'));
+  }
+
   // Do not create a new Conversation if one already exists
   const allUsers = [userId, ...others];
   const existingCid = await existingConversationIdAmongstUsers(allUsers);
   if (existingCid !== undefined) {
-    return existingCid;
+    return postMessage(existingCid, userId, message);
   }
+
+  const cid = uuidv1();
 
   const params = {
     TableName: 'conversations',
@@ -267,14 +314,10 @@ async function initiateConversation(userId, others) {
 
   const thisUsersConversationEntry = docClient.put(params).promise();
 
-  const allUsersValid = await validateUserIds([userId, ...others]);
-  if (allUsersValid === false) {
-    return Promise.reject(Error('UserIds not valid'));
-  }
-
   const conversationsToSave = [thisUsersConversationEntry, ...conversationTableEntries];
 
-  return Promise.all(conversationsToSave).then(() => cid);
+  return Promise.all(conversationsToSave)
+    .then(() => postMessage(cid, userId, message));
 }
 
 /**
@@ -284,6 +327,30 @@ function validateEmail(email) {
   /* eslint-disable-next-line no-useless-escape */
   const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(String(email).toLowerCase());
+}
+
+async function updateUser(userId, displayName) {
+  if (!displayName || !userId) {
+    return Promise.reject(Error('Invalid parameters to call updateUser'));
+  }
+
+  const params = {
+    TableName: 'users',
+    ConditionExpression: 'attribute_exists(userId)',
+    Item: {
+      userId,
+      displayName,
+    },
+  };
+
+  await docClient.put(params).promise().catch((error) => {
+    if (error.code === 'ConditionalCheckFailedException') {
+      return Promise.reject(Error('User does not exist'));
+    }
+    return Promise.reject(error);
+  });
+
+  return getUser(userId);
 }
 
 /**
@@ -391,47 +458,6 @@ async function registerUserWithPhoneNumber(userId, phoneNumber, displayName) {
 
 }
 
-/**
-* Posts a mesage from the sender to the group participating in the
-* conversation.
-*/
-async function postMessage(conversationId, sender, message, ts = undefined) {
-
-  const timestamp = !ts ? new Date().toISOString() : ts;
-
-  if (!sender) {
-    return Promise.reject(Error('sender must be set'));
-  }
-
-  const params = {
-    TableName: 'messages',
-    Item: {
-      conversationId,
-      timestamp,
-      message,
-      sender,
-    },
-  };
-
-  const user = await getUser(sender);
-  if (!user) {
-    throw new Error('Sender is not valid');
-  }
-
-  const conversationIds = await getConversationIds(user.userId);
-  if (conversationIds.includes(conversationId) === false) {
-    return Promise.reject(Error('Sender is not part of the conversation'));
-  }
-
-  return docClient.put(params).promise().then(() => ({
-    conversationId,
-    message,
-    sender,
-    timestamp,
-  }));
-
-}
-
 async function registerUsers(users) {
   const promises = users.map((user) => {
     if (user.phoneNumber) {
@@ -446,6 +472,7 @@ async function registerUsers(users) {
 }
 
 module.exports = {
+  updateUser,
   existingConversationIdAmongstUsers,
   registerUsers,
   removeFromConversation,

@@ -1,5 +1,6 @@
 const assert = require('assert');
 const AWS = require('aws-sdk');
+const mlog = require('mocha-logger');
 const utils = require('./testUtils.js');
 
 AWS.config.update({
@@ -8,7 +9,7 @@ AWS.config.update({
 
 describe('Lambda tests', () => {
 
-  it('handles lambda errors', () => {
+  it('handles lambda errors', async () => {
     const lambda = new AWS.Lambda();
 
     const initiateConversationParams = {
@@ -19,19 +20,20 @@ describe('Lambda tests', () => {
         },
         arguments: {
           others: ['fake userid'],
+          message: 'hello',
         },
       }),
     };
 
-    return lambda.invoke(initiateConversationParams).promise()
-      .then((data) => {
-        const response = JSON.parse(data.Payload);
-        assert(response.errorMessage !== undefined);
-        assert.equal('UserIds not valid', response.errorMessage);
-      });
+    const data = await lambda.invoke(initiateConversationParams).promise();
+    const response = JSON.parse(data.Payload);
+
+    assert(response.errorMessage !== undefined);
+    assert.equal('UserIds not valid', response.errorMessage);
+
   });
 
-  it('invokes lambda functions', () => {
+  it('invokes lambda functions', async () => {
     const lambda = new AWS.Lambda();
 
     const u1 = utils.randomTestUser();
@@ -62,73 +64,93 @@ describe('Lambda tests', () => {
     const r1 = lambda.invoke(registerUser1Params).promise();
     const r2 = lambda.invoke(registerUser2Params).promise();
 
-    return Promise.all([r1, r2])
-      .then((regsitrationResults) => {
-        const results1 = JSON.parse(regsitrationResults[0].Payload);
-        const results2 = JSON.parse(regsitrationResults[1].Payload);
-        assert(results1.userId !== undefined);
-        assert(results2.userId !== undefined);
+    mlog.log('Regisering users');
+    const regsitrationResults = await Promise.all([r1, r2]);
+    const results1 = JSON.parse(regsitrationResults[0].Payload);
+    const results2 = JSON.parse(regsitrationResults[1].Payload);
+    assert(results1.userId !== undefined);
+    assert(results2.userId !== undefined);
 
-        const initiateConversationParams = {
-          FunctionName: 'initiateConversation',
-          Payload: JSON.stringify({
-            user: {
-              userId: u1.userId,
-            },
-            arguments: {
-              others: [u2.userId],
-            },
-          }),
-        };
+    const initiateConversationParams = {
+      FunctionName: 'initiateConversation',
+      Payload: JSON.stringify({
+        user: {
+          userId: u1.userId,
+        },
+        arguments: {
+          others: [u2.userId],
+          message: 'hello',
+        },
+      }),
+    };
 
-        return lambda.invoke(initiateConversationParams).promise()
-          .then((data) => {
-            assert.equal(200, data.StatusCode);
-            const conversationId = JSON.parse(data.Payload);
-            assert(conversationId !== undefined);
-            return conversationId;
-          })
-          .then((conversationId) => {
-            const postMessageParams = {
-              FunctionName: 'postMessage',
-              Payload: JSON.stringify({
-                user: {
-                  userId: u1.userId,
-                },
-                arguments: {
-                  conversationId,
-                  message: 'hi',
-                },
-              }),
-            };
+    mlog.log('Initiating conversation');
+    const initiateData = await lambda.invoke(initiateConversationParams).promise();
+    assert.equal(200, initiateData.StatusCode);
+    const msg = JSON.parse(initiateData.Payload);
+    /* eslint-disable-next-line prefer-destructuring */
+    const conversationId = msg.conversationId;
+    assert(conversationId !== undefined);
 
-            return lambda.invoke(postMessageParams).promise()
-              .then((data) => {
-                const postedMessage = JSON.parse(data.Payload);
-                assert.equal('hi', postedMessage.message);
+    const postMessageParams = {
+      FunctionName: 'postMessage',
+      Payload: JSON.stringify({
+        user: {
+          userId: u1.userId,
+        },
+        arguments: {
+          conversationId,
+          message: 'hello again',
+        },
+      }),
+    };
 
-                const getConversationParams = {
-                  FunctionName: 'getConversation',
-                  Payload: JSON.stringify({
-                    user: {
-                      userId: u1.userId,
-                    },
-                    arguments: {
-                      conversationId,
-                      since: new Date(),
-                    },
-                  }),
-                };
+    mlog.log('Posting a message');
+    const postData = await lambda.invoke(postMessageParams).promise();
+    const postedMessage = JSON.parse(postData.Payload);
 
-                return lambda.invoke(getConversationParams).promise();
-              })
-              .then((data) => {
-                assert.equal(200, data.StatusCode);
-                const conversation = JSON.parse(data.Payload);
-                assert.equal(1, conversation.messages.length);
-                assert.equal('hi', conversation.messages[0].message);
-              });
-          });
-      });
+    assert.equal('hello again', postedMessage.message);
+
+    const getConversationParams = {
+      FunctionName: 'getConversation',
+      Payload: JSON.stringify({
+        user: {
+          userId: u1.userId,
+        },
+        arguments: {
+          conversationId,
+          since: new Date(),
+        },
+      }),
+    };
+
+    mlog.log('Getting messages');
+    const getConversationData = await lambda.invoke(getConversationParams).promise();
+
+    assert.equal(200, getConversationData.StatusCode);
+    const conversation = JSON.parse(getConversationData.Payload);
+    assert.equal(2, conversation.messages.length);
+    assert.equal('hello', conversation.messages[0].message);
+    assert.equal('hello again', conversation.messages[1].message);
+
+    const updateUserParams = {
+      FunctionName: 'updateUser',
+      Payload: JSON.stringify({
+        user: {
+          userId: u1.userId,
+        },
+        arguments: {
+          displayName: 'Superman',
+        },
+      }),
+    };
+
+    mlog.log('Updating the user displayName');
+    const updateUserData = await lambda.invoke(updateUserParams).promise();
+
+    assert.equal(200, updateUserData.StatusCode);
+    const updatedUser = JSON.parse(updateUserData.Payload);
+    assert.equal('Superman', updatedUser.displayName);
+
   });
 });

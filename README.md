@@ -8,6 +8,40 @@ The programming model is fairly simple:
 2. Users can initiate a conversation with someone else
 3. Users can post messages to the conversation. All other participants of that conversation can retrieve updates via the `getConversation` API or in realtime using [GraphQL Subscriptions](https://docs.aws.amazon.com/appsync/latest/devguide/real-time-data.html).
 
+```javascript
+const john = await api.registerUserWithEmail('user-id-1', 'john@example.com', 'John');
+const anthony = await api.registerUserWithEmail('user-id-2', 'anthony@example.com', 'Anthony');
+
+const conversationId = await api.initiateConversation(john.userId, [anthony.userId], 'Hey')
+
+await api.getConversation(conversationId, anthony.userId)
+// [ { conversationId: '1234', messages: ['Hey'] } ]
+
+await api.postMessage(anthony.userId, 'Hey John')
+await api.postMessage(john.userId, 'Whats up?')
+
+```
+
+Using GraphQL Subscriptions, messages can be retrieved realtime
+
+```javascript
+
+const subscription = gql`
+      subscription newMessage{
+        newMessage(conversationId: "${conversationId}") {
+          message,sender,timestamp,conversationId
+        }
+      }`;
+
+const sub = await client.subscribe({ query: subscription });
+
+const realtimeResults = function realtimeResults(result) {
+  console.log('Received a new message!');
+};
+
+sub.close();
+
+```
 
 ## Getting Started
 

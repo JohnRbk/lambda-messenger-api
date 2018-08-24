@@ -1,7 +1,7 @@
 // const firebase = require('firebase');
 const admin = require('firebase-admin');
 const utils = require('../tests/testUtils.js');
-const api = require('../api.js');
+const api = require('../src/api.js');
 
 utils.initializeFirebaseIfNeeded();
 utils.initializeFirebaseAdminIfNeeded();

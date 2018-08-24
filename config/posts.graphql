@@ -2,7 +2,8 @@ fragment conversationFields on Conversation {
   messages {
     message,
     sender,
-    timestamp
+    timestamp,
+    conversationId
   },
   conversationId,
   users {
@@ -38,8 +39,19 @@ mutation postMessage($conversationId: String!, $message: String!) {
 	}
 }
 
-mutation initiateConversation($others:[String]) {
-  initiateConversation(others: $others)
+mutation updateUser($displayName: String!) {
+	updateUser(displayName: $displayName){
+    userId,
+    displayName,
+    phoneNumber,
+    email
+	}
+}
+
+mutation initiateConversation($others:[String], $message: String!) {
+  initiateConversation(others: $others, message: $message){
+    message,sender,timestamp,conversationId
+  }
 }
 
 query getConversation($conversationId: String!, $since: String) {

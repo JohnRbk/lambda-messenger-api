@@ -17,6 +17,7 @@ AWS AppSync provides a GraphQL service for the LambdaMessenger project. With App
 	* postMessage
 	* registerUserWithEmail
 	* registerUserWithPhoneNumber
+	* updateUser
 	
 	DataSource creation should look like this:
 	
