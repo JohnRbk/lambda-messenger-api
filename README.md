@@ -9,16 +9,21 @@ The programming model is fairly simple:
 3. Users can post messages to the conversation. All other participants of that conversation can retrieve updates via the `getConversation` API or in realtime using [GraphQL Subscriptions](https://docs.aws.amazon.com/appsync/latest/devguide/real-time-data.html).
 
 ```javascript
+
+// Register two users (the ID should come from FirebaseAuth)
 const john = await api.registerUserWithEmail('user-id-1', 'john@example.com', 'John');
 const anthony = await api.registerUserWithEmail('user-id-2', 'anthony@example.com', 'Anthony');
 
-const conversationId = await api.initiateConversation(john.userId, [anthony.userId], 'Hey')
+// Start a conversation with one or more users
+const conversationId = await api.initiateConversation(john.userId, [anthony.userId])
 
-await api.getConversation(conversationId, anthony.userId)
-// [ { conversationId: '1234', messages: ['Hey'] } ]
-
+// Post messages to one another
 await api.postMessage(anthony.userId, 'Hey John')
-await api.postMessage(john.userId, 'Whats up?')
+await api.postMessage(john.userId, 'Hi')
+
+// Get the conversation log
+await api.getConversation(conversationId, anthony.userId)
+// [ { conversationId: '1234', messages: [ {'Hey John'}, {'Hi'}] } ]
 
 ```
 
