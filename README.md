@@ -1,6 +1,6 @@
 # LambdaMessenger
 
-LambdaMessenger is a prototype for a serverless chat app using AWS AppSync, Node.js Lambda Functions, and DynamoDB.
+LambdaMessenger is a prototype for a serverless chat app using AWS AppSync, Node.js Lambda Functions, and DynamoDB. It works with the [LambdaMessenger iOS app](https://github.com/JohnRbk/lambda-messenger-ios).
 
 The programming model is fairly simple:
 
