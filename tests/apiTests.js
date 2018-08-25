@@ -13,16 +13,26 @@ describe('API Unit Tests', () => {
 
     const others = [henry.userId, steve.userId];
 
-    const msg = await api.initiateConversation(mike.userId, others, 'hello');
+    const cid = await api.initiateConversation(mike.userId, others);
 
-    const postResult = await api.postMessage(msg.conversationId, mike.userId, 'hi');
+    const postResult = await api.postMessage(cid, mike.userId, 'hi');
     assert(postResult.timestamp);
     assert.equal('hi', postResult.message);
-    assert.equal(mike.userId, postResult.sender);
-    const conversation = await api.getConversation(msg.conversationId, mike.userId);
+    assert.equal(mike.userId, postResult.sender.userId);
+    const conversation = await api.getConversation(cid, mike.userId);
     assert.equal(3, conversation.users.length);
-    assert.equal(2, conversation.messages.length);
+    assert.equal(1, conversation.messages.length);
+    assert.equal(mike.userId, conversation.messages[0].sender.userId);
 
+  });
+
+  it('can handle an invalid data when getting a user', async() => {
+    const u1 = await api.getUser('bad id');
+    const u2 = await api.lookupUserByEmail(utils.randomEmail());
+    const u3 = await api.lookupUserByPhoneNumber(utils.randomPhoneNumber());
+    assert(u1 === undefined);
+    assert(u2 === undefined);
+    assert(u3 === undefined);
   });
 
   it('can remove a user from a conversation', async () => {
@@ -32,28 +42,28 @@ describe('API Unit Tests', () => {
 
     await api.registerUsers([mike, henry, steve]);
 
-    const msg = await api.initiateConversation(mike.userId, [steve.userId], 'hello');
+    const cid = await api.initiateConversation(mike.userId, [steve.userId]);
 
     // Shouldn't be able to remove a user not part of a conversation
     let caughtRemovalError = false;
     try {
-      await api.removeFromConversation(henry.userId, msg.conversationId);
+      await api.removeFromConversation(henry.userId, cid);
     } catch (error) {
       assert.equal('User is not part of conversation', error.message);
       caughtRemovalError = true;
     }
     assert(caughtRemovalError);
 
-    await api.joinConversation(henry.userId, msg.conversationId);
+    await api.joinConversation(henry.userId, cid);
 
-    const conversationUsers = await api.getConversationUsers(msg.conversationId);
+    const conversationUsers = await api.getConversationUsers(cid);
     assert(conversationUsers.map(u => u.userId).includes(henry.userId) === true);
 
-    await api.removeFromConversation(henry.userId, msg.conversationId);
+    await api.removeFromConversation(henry.userId, cid);
 
     let caughtPostError = false;
     try {
-      await api.postMessage(msg.conversationId, henry.userId, 'hi');
+      await api.postMessage(cid, henry.userId, 'hi');
     } catch (error) {
       assert.equal('Sender is not part of the conversation', error.message);
       caughtPostError = true;
@@ -73,14 +83,14 @@ describe('API Unit Tests', () => {
 
     const others = [henry.userId, steve.userId];
 
-    const msg = await api.initiateConversation(mike.userId, others, 'hello');
-    assert(msg.conversationId);
+    const cid = await api.initiateConversation(mike.userId, others);
+    assert(cid);
 
     const commonCid = await api.existingConversationIdAmongstUsers(
       [henry.userId, steve.userId, mike.userId],
     );
 
-    assert.equal(commonCid, msg.conversationId);
+    assert.equal(commonCid, cid);
 
   });
 
@@ -135,15 +145,15 @@ describe('API Unit Tests', () => {
 
   });
 
-  it('can not register a user with bad data', () => {
-    const badRegister = api.registerUserWithEmail(undefined, undefined,
-      undefined);
-    return badRegister
-      .catch(error => error)
-      .then((thrownError) => {
-        assert(thrownError !== undefined);
-        assert(thrownError instanceof Error);
-      });
+  it('can not register a user with bad data', async() => {
+    let raisedException = false;
+    try {
+      await api.registerUserWithEmail(undefined, undefined, undefined);
+    } catch (error) {
+      raisedException = true;
+    }
+
+    assert(raisedException);
   });
 
   it('can prevent users eavesdropping on a conversation', async () => {
@@ -151,13 +161,13 @@ describe('API Unit Tests', () => {
     const henry = utils.randomTestUser('henry');
     const eavesdropper = utils.randomTestUser('eavesdropper');
     await api.registerUsers([mike, henry, eavesdropper]);
-    const msg = await api.initiateConversation(mike.userId, [henry.userId], 'hello');
-    assert(msg.conversationId);
+    const cid = await api.initiateConversation(mike.userId, [henry.userId]);
+    assert(cid);
 
     let caughtError = false;
 
     try {
-      await api.getConversation(msg.conversationId, eavesdropper.userId);
+      await api.getConversation(cid, eavesdropper.userId);
     } catch (error) {
       assert.equal('User is not part of conversation', error.message);
       caughtError = true;
@@ -170,7 +180,7 @@ describe('API Unit Tests', () => {
   it('can prevent fake users from initiating a converation', async () => {
     let raisedException = false;
     try {
-      await api.initiateConversation(uuidv1(), [uuidv1()], 'hello');
+      await api.initiateConversation(uuidv1(), [uuidv1()]);
     } catch (error) {
       raisedException = true;
     }
@@ -185,39 +195,26 @@ describe('API Unit Tests', () => {
 
     const others = [henry.userId, steve.userId];
 
-    await api.initiateConversation(mike.userId, others, 'hello');
+    await api.initiateConversation(mike.userId, others);
 
     [mike, henry, steve].forEach(async (user) => {
       const convoIds = await api.getConversationIds(user.userId);
       assert.equal(1, convoIds.length);
       const convo = await api.getConversation(convoIds[0], user.userId);
-      assert(convo.messages.length === 1);
-      assert.equal('hello', convo.messages[0].message);
+      assert(convo.messages.length === 0);
     });
 
   });
 
 
-  it('can validate a user', () => {
+  it('can validate a user', async () => {
     const u = utils.randomTestUser();
 
-    return api.validateUserIds([uuidv1()])
-      .then((isValid) => {
-        assert(isValid === false);
-        return api.registerUserWithPhoneNumber(u.userId, u.phoneNumber, u.displayName);
-      })
-      .then(user => api.validateUserIds([user.userId]))
-      .then((isValid) => {
-        assert(isValid === true);
-      });
-  });
+    const isValid = await api.validateUserIds([uuidv1()]);
+    assert(isValid === false);
+    const user = await api.registerUserWithPhoneNumber(u.userId, u.phoneNumber, u.displayName);
+    assert(await api.validateUserIds([user.userId]));
 
-  it('can handle an invalid userId when getting a user', () => {
-    return api.getUser('bad id')
-      .catch(() => assert.fail('should not throw an error'))
-      .then((thrownError) => {
-        assert(thrownError === undefined);
-      });
   });
 
   it('can register a user with a phone number', async () => {
@@ -338,7 +335,7 @@ describe('API Unit Tests', () => {
   });
 
   it('can prevent unregistered users from starting a conversation', () => {
-    return api.initiateConversation(uuidv1(), [uuidv1()], 'hello')
+    return api.initiateConversation(uuidv1(), [uuidv1()])
       .catch(error => error)
       .then((thrownError) => {
         assert(thrownError instanceof Error === true);
@@ -355,9 +352,9 @@ describe('API Unit Tests', () => {
 
     const others = [henry.userId, steve.userId];
 
-    const m1 = await api.initiateConversation(mike.userId, others, 'hello');
-    const m2 = await api.initiateConversation(mike.userId, others, 'hello');
-    assert.equal(m1.conversationId, m2.conversationId);
+    const cid1 = await api.initiateConversation(mike.userId, others);
+    const cid2 = await api.initiateConversation(mike.userId, others);
+    assert.equal(cid1, cid2);
   });
 
   it('can get all users participating in a conversation', async () => {
@@ -369,9 +366,9 @@ describe('API Unit Tests', () => {
 
     const others = [henry.userId, steve.userId];
 
-    const msg = await api.initiateConversation(mike.userId, others, 'hello');
+    const cid = await api.initiateConversation(mike.userId, others);
 
-    const users = await api.getConversationUsers(msg.conversationId);
+    const users = await api.getConversationUsers(cid);
 
     assert(users !== undefined);
     assert.equal(3, users.length);
@@ -394,8 +391,7 @@ describe('API Unit Tests', () => {
       u3.displayName);
 
     return Promise.all([r1, r2, r3])
-      .then(() => api.initiateConversation(u1.userId, [u2.userId], 'hello'))
-      .then(msg => msg.conversationId)
+      .then(() => api.initiateConversation(u1.userId, [u2.userId]))
       .then(cid => api.postMessage(cid, 'invalid usser', 'im crashing'))
       .catch(err => err)
       .then((thrownError) => {
@@ -403,7 +399,7 @@ describe('API Unit Tests', () => {
       });
   });
 
-  it('can get all message history', () => {
+  it('can get all message history', async () => {
     const u1 = utils.randomTestUser();
     const u2 = utils.randomTestUser();
     const u3 = utils.randomTestUser();
@@ -414,18 +410,15 @@ describe('API Unit Tests', () => {
     const p3 = api.registerUserWithPhoneNumber(u3.userId, u3.phoneNumber,
       u3.displayName);
 
-    return Promise.all([p1, p2, p3])
-      .then(() => api.initiateConversation(u1.userId, [u2.userId, u3.userId], 'hello'))
-      .then(msg => msg.conversationId)
-      .then(cid => api.postMessage(cid, u1.userId, 'hi')
-        .then(() => api.getConversationHistory(
-          u1.userId,
-        ))
-        .then((history) => {
-          assert.equal(1, history.length);
-          assert.equal('hello', history[0].messages[0].message);
-          assert.equal('hi', history[0].messages[1].message);
-        }));
+    await Promise.all([p1, p2, p3]);
+
+    const cid = await api.initiateConversation(u1.userId, [u2.userId, u3.userId]);
+
+    await api.postMessage(cid, u1.userId, 'hi');
+    const history = await api.getConversationHistory(u1.userId);
+    assert.equal(1, history.length);
+    assert.equal('hi', history[0].messages[0].message);
+
   });
 
 });

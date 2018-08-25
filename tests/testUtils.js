@@ -18,11 +18,16 @@ function randomEmail(name = undefined) {
     : `${uuidv1()}@example.com`;
 }
 
+function randomPhoneNumber() {
+  const phoneNumber = `${randomIntFromInterval(200, 999)}${randomIntFromInterval(1000, 9999)}`;
+  return `+1212${phoneNumber}`;
+}
+
 function randomTestUser(name) {
-  const randomPhoneNumber = `${randomIntFromInterval(200, 999)}${randomIntFromInterval(1000, 9999)}`;
+
   return {
     userId: uuidv1(),
-    phoneNumber: `+1212${randomPhoneNumber}`,
+    phoneNumber: randomPhoneNumber(),
     displayName: name === undefined ? uuidv1() : name,
     email: randomEmail(name),
   };
@@ -83,6 +88,7 @@ function initializeFirebaseIfNeeded() {
 module.exports = {
   timeout,
   randomEmail,
+  randomPhoneNumber,
   initializeFirebaseIfNeeded,
   randomTestUser,
   createFirebaseUserWithEmail,

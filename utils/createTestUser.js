@@ -1,7 +1,7 @@
 const firebase = require('firebase');
 const { argv } = require('yargs');
 const utils = require('../tests/testUtils.js');
-const api = require('../api.js');
+const api = require('../src/api.js');
 
 utils.initializeFirebaseIfNeeded();
 

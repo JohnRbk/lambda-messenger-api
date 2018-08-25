@@ -12,7 +12,7 @@ require('./subscriptionHack.js');
 const createAndRegisterUsers = require('./appsyncTestUtils.js');
 
 
-describe('Appsync Tests', () => {
+describe('Subscription Tests', () => {
 
   let client;
 
@@ -50,7 +50,7 @@ describe('Appsync Tests', () => {
     admin.app().delete();
   });
 
-  it('can call subscribe to messages', async () => {
+  it('can get realtime message updates', async () => {
 
     const auth = firebase.auth();
 
@@ -66,7 +66,7 @@ describe('Appsync Tests', () => {
     const initiateConversation = gql`
       mutation m{
         initiateConversation(others: ["${u2.userId}"], message: "hello"){
-          message,sender,timestamp,conversationId
+          message, sender { userId, displayName },timestamp,conversationId
         }
       }`;
 
@@ -79,7 +79,7 @@ describe('Appsync Tests', () => {
     const subscription = gql`
       subscription newMessage{
         newMessage(conversationId: "${conversationId}") {
-          message,sender,timestamp,conversationId
+          message, sender { userId, displayName },timestamp,conversationId
         }
       }`;
 
@@ -105,7 +105,7 @@ describe('Appsync Tests', () => {
     const postMessage = gql`
       mutation m{
         postMessage(conversationId: "${conversationId}", message: "hi"){
-          message,sender,timestamp,conversationId
+          message,sender { userId, displayName },timestamp,conversationId
         }
       }`;
 

@@ -232,20 +232,20 @@ async function postMessage(conversationId, sender, message, ts = undefined) {
     return Promise.reject(Error('sender must be set'));
   }
 
+  const user = await getUser(sender);
+  if (!user) {
+    throw new Error('Sender is not valid');
+  }
+
   const params = {
     TableName: 'messages',
     Item: {
       conversationId,
       timestamp,
       message,
-      sender,
+      sender: user,
     },
   };
-
-  const user = await getUser(sender);
-  if (!user) {
-    throw new Error('Sender is not valid');
-  }
 
   const conversationIds = await getConversationIds(user.userId);
   if (conversationIds.includes(conversationId) === false) {
@@ -254,9 +254,9 @@ async function postMessage(conversationId, sender, message, ts = undefined) {
 
   return docClient.put(params).promise().then(() => ({
     conversationId,
-    message,
-    sender,
     timestamp,
+    message,
+    sender: user,
   }));
 
 }
@@ -265,9 +265,9 @@ async function postMessage(conversationId, sender, message, ts = undefined) {
 * Generates a conversation id that is shared by the user and others. This allows
 * the group to post messages to one another.
 */
-async function initiateConversation(userId, others, message) {
+async function initiateConversation(userId, others) {
 
-  if (!userId || !message) {
+  if (!userId) {
     return Promise.reject(Error('Invalid parameters to call initiateConversation'));
   }
 
@@ -284,7 +284,7 @@ async function initiateConversation(userId, others, message) {
   const allUsers = [userId, ...others];
   const existingCid = await existingConversationIdAmongstUsers(allUsers);
   if (existingCid !== undefined) {
-    return postMessage(existingCid, userId, message);
+    return existingCid;
   }
 
   const cid = uuidv1();
@@ -317,7 +317,7 @@ async function initiateConversation(userId, others, message) {
   const conversationsToSave = [thisUsersConversationEntry, ...conversationTableEntries];
 
   return Promise.all(conversationsToSave)
-    .then(() => postMessage(cid, userId, message));
+    .then(() => cid);
 }
 
 /**

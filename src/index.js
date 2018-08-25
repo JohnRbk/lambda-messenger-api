@@ -53,6 +53,5 @@ exports.initiateConversation = async function(event, context) {
   return api.initiateConversation(
     event.user.userId,
     event.arguments.others,
-    event.arguments.message,
   );
 };

@@ -20,7 +20,6 @@ describe('Lambda tests', () => {
         },
         arguments: {
           others: ['fake userid'],
-          message: 'hello',
         },
       }),
     };
@@ -79,7 +78,6 @@ describe('Lambda tests', () => {
         },
         arguments: {
           others: [u2.userId],
-          message: 'hello',
         },
       }),
     };
@@ -87,9 +85,8 @@ describe('Lambda tests', () => {
     mlog.log('Initiating conversation');
     const initiateData = await lambda.invoke(initiateConversationParams).promise();
     assert.equal(200, initiateData.StatusCode);
-    const msg = JSON.parse(initiateData.Payload);
-    /* eslint-disable-next-line prefer-destructuring */
-    const conversationId = msg.conversationId;
+    const conversationId = JSON.parse(initiateData.Payload);
+
     assert(conversationId !== undefined);
 
     const postMessageParams = {
@@ -100,7 +97,7 @@ describe('Lambda tests', () => {
         },
         arguments: {
           conversationId,
-          message: 'hello again',
+          message: 'hello',
         },
       }),
     };
@@ -109,7 +106,9 @@ describe('Lambda tests', () => {
     const postData = await lambda.invoke(postMessageParams).promise();
     const postedMessage = JSON.parse(postData.Payload);
 
-    assert.equal('hello again', postedMessage.message);
+    assert.equal('hello', postedMessage.message);
+    assert.equal(u1.userId, postedMessage.sender.userId);
+    assert.equal(u1.displayName, postedMessage.sender.displayName);
 
     const getConversationParams = {
       FunctionName: 'getConversation',
@@ -129,9 +128,10 @@ describe('Lambda tests', () => {
 
     assert.equal(200, getConversationData.StatusCode);
     const conversation = JSON.parse(getConversationData.Payload);
-    assert.equal(2, conversation.messages.length);
+    assert.equal(1, conversation.messages.length);
     assert.equal('hello', conversation.messages[0].message);
-    assert.equal('hello again', conversation.messages[1].message);
+    assert.equal(u1.userId, conversation.messages[0].sender.userId);
+    assert.equal(u1.phoneNumber, conversation.messages[0].sender.phoneNumber);
 
     const updateUserParams = {
       FunctionName: 'updateUser',

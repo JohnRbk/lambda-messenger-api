@@ -1,21 +1,22 @@
 type Conversation {
-	messages: [Message]!
-	users: [User]!
+	messages: [Message!]!
+	users: [User!]!
 	conversationId: String!
 }
 
 type Message {
 	message: String!
-	sender: String!
+	sender: User!
 	timestamp: String!
 	conversationId: String!
 }
 
 type Mutation {
-	registerUserWithPhoneNumber: User
-	registerUserWithEmail: User
-	postMessage(conversationId: String!, message: String!): Message
+	registerUserWithPhoneNumber: User!
+	registerUserWithEmail: User!
+	postMessage(conversationId: String!, message: String!): Message!
 	initiateConversation(others: [String]): String!
+	updateUser(displayName: String!): User!
 }
 
 type Query {
