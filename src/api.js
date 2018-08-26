@@ -42,7 +42,7 @@ function getUser(userId) {
 function validateUserIds(userIds) {
 
   if (Array.isArray(userIds) === false) {
-    return Promise.reject(Error('validateUserIds requirs array'));
+    return Promise.reject(Error('validateUserIds requires array'));
   }
 
   const promises = [];
@@ -84,6 +84,7 @@ function lookupUserByEmail(email) {
   return docClient.query(params).promise().then(data => data.Items[0]);
 }
 
+/** Get all the conversationIds associated with the user */
 function getConversationIds(userId) {
 
   if (typeof userId !== 'string') {
@@ -275,6 +276,10 @@ async function initiateConversation(userId, others) {
     return Promise.reject(Error('initiateConversation requires array'));
   }
 
+  if (others.includes(userId)) {
+    return Promise.reject(Error('You should not talk to yourself'));
+  }
+
   const allUsersValid = await validateUserIds([userId, ...others]);
   if (allUsersValid === false) {
     return Promise.reject(Error('UserIds not valid'));
@@ -350,7 +355,42 @@ async function updateUser(userId, displayName) {
     return Promise.reject(error);
   });
 
-  return getUser(userId);
+  const updatedUser = await getUser(userId);
+
+  const history = await getConversationHistory(userId);
+
+  const promises = [];
+  history.forEach((convo) => {
+
+    convo.messages.forEach((message) => {
+      const updateParams = {
+        TableName: 'messages',
+        Key: {
+          conversationId: message.conversationId,
+          timestamp: message.timestamp,
+        },
+        UpdateExpression: 'set sender = :u',
+        ConditionExpression: 'sender.userId = :me',
+        ExpressionAttributeValues: {
+          ':me': userId,
+          ':u': updatedUser,
+        },
+      };
+      const p = docClient.update(updateParams).promise()
+        .catch((error) => {
+          if (error.code !== 'ConditionalCheckFailedException') {
+            return Promise.reject(error);
+          }
+          return Promise.resolve();
+        });
+
+      promises.push(p);
+    });
+
+  });
+
+  return Promise.all(promises).then(() => updatedUser);
+
 }
 
 /**

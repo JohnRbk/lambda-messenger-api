@@ -5,6 +5,50 @@ const utils = require('./testUtils.js');
 
 describe('API Unit Tests', () => {
 
+  it('can update a displayName', async() => {
+    const u = utils.randomTestUser();
+
+    const user = await api.registerUserWithEmail(u.userId, u.email, u.displayName);
+    await api.updateUser(user.userId, 'Austin');
+    const foundUser = await api.getUser(user.userId);
+    assert.equal('Austin', foundUser.displayName);
+
+  });
+
+  it('can update a displayName in older messages', async() => {
+    const u1 = utils.randomTestUser();
+    const u2 = utils.randomTestUser();
+    await api.registerUsers([u1, u2]);
+
+    const cid = await api.initiateConversation(u1.userId, [u2.userId]);
+
+    await api.postMessage(cid, u1.userId, 'hi');
+    await api.postMessage(cid, u2.userId, 'hey');
+    const c1 = await api.getConversation(cid, u1.userId);
+    assert.equal(u1.displayName, c1.messages[0].sender.displayName);
+    assert.equal(u2.displayName, c1.messages[1].sender.displayName);
+
+    await api.updateUser(u1.userId, 'Anne');
+
+    const c2 = await api.getConversation(cid, u1.userId);
+    assert.equal('Anne', c2.messages[0].sender.displayName);
+    assert.equal(u2.displayName, c1.messages[1].sender.displayName);
+  });
+
+  it('can not start a conversation with yourself', async() => {
+    const u1 = utils.randomTestUser();
+    await api.registerUsers([u1]);
+
+    let raisedException = false;
+    try {
+      await api.initiateConversation(u1.userId, [u1.userId]);
+    } catch (error) {
+      raisedException = true;
+    }
+
+    assert(raisedException);
+  });
+
   it('can post a message to a conversation', async () => {
     const mike = utils.randomTestUser('mike');
     const henry = utils.randomTestUser('henry');
