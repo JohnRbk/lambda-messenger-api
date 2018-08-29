@@ -30,6 +30,7 @@ function randomTestUser(name) {
     phoneNumber: randomPhoneNumber(),
     displayName: name === undefined ? uuidv1() : name,
     email: randomEmail(name),
+    fcmToken: uuidv1(),
   };
 }
 
@@ -74,6 +75,7 @@ function initializeFirebaseAdminIfNeeded() {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       databaseURL: config.FIREBASE_DATABASE_URL,
+      projectId: firebaseConfig.projectId,
     });
   }
 }

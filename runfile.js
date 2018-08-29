@@ -31,8 +31,7 @@ function zip() {
   const ts = new Date().toISOString().replace(/[:\.]/g, '-');
   const zipfile = `lambda-package-${ts}.zip`;
   console.log(`Zipping file ${zipfile} ...`);
-  run(`zip -q -r ${zipfile} node_modules/*`);
-  run(`zip -q -j ${zipfile} src/index.js src/api.js`);
+  run(`zip -q -r ${zipfile} node_modules/* src/index.js src/api.js config/config.json config/firebase-config.js config/serviceAccountKey.json`);
   return zipfile;
 }
 
@@ -53,7 +52,7 @@ function deploy(zipfile) {
     --parameter-overrides \
       BucketName=${config.LAMBDA_PACKAGE_S3_BUCKET} \
       LambdaRole=${config.LAMBDA_IAM_ROLE} \
-      CodeKey=${zipfile}`,
+      ZipFile=${zipfile}`,
   );
 }
 

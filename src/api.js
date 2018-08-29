@@ -2,6 +2,10 @@
 const AWS = require('aws-sdk');
 const uuidv1 = require('uuid/v1');
 const { parseNumber } = require('libphonenumber-js');
+const admin = require('firebase-admin');
+const firebaseConfig = require('../config/firebase-config');
+const config = require('../config/config.json');
+const serviceAccount = require('../config/serviceAccountKey.json');
 
 AWS.config.update({
   region: 'us-east-1',
@@ -221,13 +225,82 @@ async function existingConversationIdAmongstUsers(users) {
 
 }
 
+/** This is invoked as an async lambda function. A push notification is
+ sent to all the participants of the conversation (other than the sender) */
+async function sendPushNotifications(conversationId, sender, message, dryRun = false) {
+
+  const users = await getConversationUsers(conversationId);
+
+  const allUsersExceptSender = users.filter(u => u.userId !== sender);
+
+  if (admin.apps.length === 0) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: config.FIREBASE_DATABASE_URL,
+      projectId: firebaseConfig.projectId,
+    });
+  }
+
+  const promises = [];
+
+  /* eslint-disable-next-line */
+  for (const user of allUsersExceptSender) {
+
+    if (!user.fcmToken) {
+      return Promise.reject(Error(`fcmToken not set for user ${user.userId} to sendPushNotification`));
+    }
+
+    const pushNotification = {
+      apns: {
+        headers: {
+          'apns-priority': '10',
+        },
+        payload: {
+          data: {
+            conversationId,
+            sender: user,
+            message,
+          },
+          aps: {
+            alert: {
+              title: 'Received message from user',
+              /* subtitle: 'this is a subtitle', */
+              body: message,
+            },
+            sound: 'default',
+            badge: 0,
+            // 'content-available': 1,
+          },
+        },
+      },
+      token: user.fcmToken,
+    };
+
+    const p = admin.messaging().send(pushNotification, dryRun).then((response) => {
+      console.log(`sent notification with response: ${response}`);
+    });
+
+    promises.push(p);
+
+  }
+
+  try {
+    return Promise.all(promises);
+  } catch (error) {
+    console.log(`Error sending push notifications: ${error}`);
+    return Promise.reject(error);
+  } finally {
+    admin.app().delete(); // Required, otherwise it hangs up the process
+  }
+}
+
 /**
 * Posts a mesage from the sender to the group participating in the
 * conversation.
 */
-async function postMessage(conversationId, sender, message, ts = undefined) {
+async function postMessage(conversationId, sender, message, enablePushNotifications = false) {
 
-  const timestamp = !ts ? new Date().toISOString() : ts;
+  const timestamp = new Date().toISOString();
 
   if (!sender) {
     return Promise.reject(Error('sender must be set'));
@@ -251,6 +324,26 @@ async function postMessage(conversationId, sender, message, ts = undefined) {
   const conversationIds = await getConversationIds(user.userId);
   if (conversationIds.includes(conversationId) === false) {
     return Promise.reject(Error('Sender is not part of the conversation'));
+  }
+
+  if (enablePushNotifications === true) {
+    const lambda = new AWS.Lambda();
+
+    const sendPushNotificationParams = {
+      InvocationType: 'Event',
+      FunctionName: 'sendPushNotifications',
+      Payload: JSON.stringify({
+        arguments: {
+          sender,
+          conversationId,
+          dryRun: false,
+          message,
+        },
+      }),
+    };
+
+    // Sent async, due to InvocationType
+    await lambda.invoke(sendPushNotificationParams).promise();
   }
 
   return docClient.put(params).promise().then(() => ({
@@ -334,21 +427,34 @@ function validateEmail(email) {
   return re.test(String(email).toLowerCase());
 }
 
-async function updateUser(userId, displayName) {
-  if (!displayName || !userId) {
+async function updateUser(userId, displayName = undefined, fcmToken = undefined) {
+  if (!userId || !(fcmToken || displayName)) {
     return Promise.reject(Error('Invalid parameters to call updateUser'));
+  }
+
+  let updateExpression;
+  if (displayName !== undefined && fcmToken !== undefined) {
+    updateExpression = 'set displayName = :displayName, fcmToken = :fcmToken';
+  } else if (displayName !== undefined) {
+    updateExpression = 'set displayName = :displayName';
+  } else if (fcmToken !== undefined) {
+    updateExpression = 'set fcmToken = :fcmToken';
   }
 
   const params = {
     TableName: 'users',
+    UpdateExpression: updateExpression,
     ConditionExpression: 'attribute_exists(userId)',
-    Item: {
+    Key: {
       userId,
-      displayName,
+    },
+    ExpressionAttributeValues: {
+      ':displayName': displayName,
+      ':fcmToken': fcmToken,
     },
   };
 
-  await docClient.put(params).promise().catch((error) => {
+  await docClient.update(params).promise().catch((error) => {
     if (error.code === 'ConditionalCheckFailedException') {
       return Promise.reject(Error('User does not exist'));
     }
@@ -400,7 +506,7 @@ async function updateUser(userId, displayName) {
 * passed in the request header. Calls to this function made from Appsync
 * are guaranteed to be authenticated against the OIDC provider (Firebase)
 */
-async function registerUserWithEmail(userId, email, displayName) {
+async function registerUserWithEmail(userId, email, displayName, fcmToken = undefined) {
 
   if (!userId || !email || !displayName) {
     return Promise.reject(Error('Invalid parameters to call registerUserWithEmail'));
@@ -417,6 +523,7 @@ async function registerUserWithEmail(userId, email, displayName) {
       userId,
       email,
       displayName,
+      fcmToken,
     },
   };
 
@@ -436,6 +543,7 @@ async function registerUserWithEmail(userId, email, displayName) {
     userId,
     email,
     displayName,
+    fcmToken,
   };
 
 }
@@ -461,7 +569,7 @@ async function deleteUser(userId) {
 * passed in the request header. Calls to this function made from Appsync
 * are guaranteed to be authenticated against the OIDC provider (Firebase)
 */
-async function registerUserWithPhoneNumber(userId, phoneNumber, displayName) {
+async function registerUserWithPhoneNumber(userId, phoneNumber, displayName, fcmToken = undefined) {
   // console.log(`Registering ${displayName} ${userId} ${phoneNumber}`);
 
   if (parseNumber(phoneNumber, 'US').phone === undefined) {
@@ -475,6 +583,7 @@ async function registerUserWithPhoneNumber(userId, phoneNumber, displayName) {
       userId,
       phoneNumber,
       displayName,
+      fcmToken,
     },
   };
 
@@ -494,6 +603,7 @@ async function registerUserWithPhoneNumber(userId, phoneNumber, displayName) {
     userId,
     phoneNumber,
     displayName,
+    fcmToken,
   };
 
 }
@@ -512,6 +622,7 @@ async function registerUsers(users) {
 }
 
 module.exports = {
+  sendPushNotifications,
   updateUser,
   existingConversationIdAmongstUsers,
   registerUsers,

@@ -23,16 +23,16 @@ subscription newMessage($conversationId: String!) {
   }
 }
 
-mutation registerUserWithEmail{
-  registerUserWithEmail {
+mutation registerUserWithEmail($fcmToken: String!){
+  registerUserWithEmail(fcmToken: $fcmToken) {
     userId,
     displayName,
     email
   }
 }
 
-mutation registerUserWithPhoneNumber{
-  registerUserWithPhoneNumber {
+mutation registerUserWithPhoneNumber($fcmToken: String!){
+  registerUserWithPhoneNumber(fcmToken: $fcmToken) {
     userId,
     displayName,
     phoneNumber
@@ -45,8 +45,8 @@ mutation postMessage($conversationId: String!, $message: String!) {
 	}
 }
 
-mutation updateUser($displayName: String!) {
-	updateUser(displayName: $displayName){
+mutation updateUser($displayName: String, $fcmToken: String) {
+	updateUser(displayName: $displayName, fcmToken: $fcmToken){
     userId,
     displayName,
     phoneNumber,

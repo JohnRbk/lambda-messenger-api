@@ -24,7 +24,7 @@ module.exports = async function createAndRegisterUsers(client, users) {
 
     const registerUserWithEmail = gql`
       mutation m{
-        registerUserWithEmail {
+        registerUserWithEmail(fcmToken: "123456") {
             userId,
             email,
             displayName

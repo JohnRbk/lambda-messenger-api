@@ -49,7 +49,7 @@ describe('Appsync Tests', () => {
   it('can handle appsync call when not logged in', () => {
     const registerUserWithEmail = gql`
         mutation m{
-          registerUserWithEmail {
+          registerUserWithEmail(fcmToken: "123456") {
               userId
           }
         }`;
@@ -106,7 +106,7 @@ describe('Appsync Tests', () => {
 
       const registerUserWithEmail = gql`
         mutation m{
-          registerUserWithEmail {
+          registerUserWithEmail(fcmToken: "123456") {
               userId,
               email,
               displayName

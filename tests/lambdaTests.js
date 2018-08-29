@@ -9,6 +9,48 @@ AWS.config.update({
 
 describe('Lambda tests', () => {
 
+  // Its expected this will fail in a test environment since the
+  // fcmToken is not an actual device token.
+  it('can invoke the pushNotification lambda', async() => {
+    const lambda = new AWS.Lambda();
+
+    const u = utils.randomTestUser();
+
+    const registerUserParams = {
+      FunctionName: 'registerUserWithPhoneNumber',
+      Payload: JSON.stringify({
+        user: {
+          userId: u.userId,
+          phoneNumber: u.phoneNumber,
+          displayName: u.displayName,
+        },
+        arguments: {
+          fcmToken: u.fcmToken,
+        },
+      }),
+    };
+
+    await lambda.invoke(registerUserParams).promise();
+
+    const sendPushNotificationParams = {
+      InvocationType: 'Event',
+      FunctionName: 'sendPushNotifications',
+      Payload: JSON.stringify({
+        arguments: {
+          sender: u.userId,
+          conversationId: '123456',
+          dryRun: true,
+          message: 'this request will fail since the fcmToken is a test token',
+        },
+      }),
+    };
+
+    const data = await lambda.invoke(sendPushNotificationParams).promise();
+    assert.equal(202, data.StatusCode);
+
+  });
+
+
   it('handles lambda errors', async () => {
     const lambda = new AWS.Lambda();
 
@@ -19,7 +61,7 @@ describe('Lambda tests', () => {
           userId: 'fake userid',
         },
         arguments: {
-          others: ['fake userid'],
+          others: ['other fake userid'],
         },
       }),
     };
@@ -46,6 +88,9 @@ describe('Lambda tests', () => {
           phoneNumber: u1.phoneNumber,
           displayName: u1.displayName,
         },
+        arguments: {
+          fcmCode: '12345',
+        },
       }),
     };
 
@@ -57,13 +102,16 @@ describe('Lambda tests', () => {
           phoneNumber: u2.phoneNumber,
           displayName: u2.displayName,
         },
+        arguments: {
+          fcmCode: '12345',
+        },
       }),
     };
 
     const r1 = lambda.invoke(registerUser1Params).promise();
     const r2 = lambda.invoke(registerUser2Params).promise();
 
-    mlog.log('Regisering users');
+    mlog.log('Registering users');
     const regsitrationResults = await Promise.all([r1, r2]);
     const results1 = JSON.parse(regsitrationResults[0].Payload);
     const results2 = JSON.parse(regsitrationResults[1].Payload);
@@ -105,7 +153,7 @@ describe('Lambda tests', () => {
     mlog.log('Posting a message');
     const postData = await lambda.invoke(postMessageParams).promise();
     const postedMessage = JSON.parse(postData.Payload);
-
+    console.log(postData);
     assert.equal('hello', postedMessage.message);
     assert.equal(u1.userId, postedMessage.sender.userId);
     assert.equal(u1.displayName, postedMessage.sender.displayName);
@@ -153,4 +201,6 @@ describe('Lambda tests', () => {
     assert.equal('Superman', updatedUser.displayName);
 
   });
+
+
 });

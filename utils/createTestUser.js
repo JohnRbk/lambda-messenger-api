@@ -9,6 +9,7 @@ async function main() {
 
   const password = 'abc123';
   const auth = firebase.auth();
+  const fcmToken = 'abc123';
 
   if (argv.newUser) {
     const email = utils.randomEmail('test-user');
@@ -26,6 +27,7 @@ async function main() {
       auth.currentUser.uid,
       auth.currentUser.email,
       auth.currentUser.displayName,
+      fcmToken,
     );
 
   } else if (argv.user) {

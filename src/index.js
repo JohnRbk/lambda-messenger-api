@@ -6,11 +6,16 @@ exports.postMessage = async function(event, context) {
     event.arguments.conversationId,
     event.user.userId,
     event.arguments.message,
+    true, /* enable push notifications */
   );
 };
 
 exports.updateUser = async function(event, context) {
-  return api.updateUser(event.user.userId, event.arguments.displayName);
+  return api.updateUser(
+    event.user.userId,
+    event.arguments.displayName,
+    event.arguments.fcmToken,
+  );
 };
 
 exports.registerUserWithPhoneNumber = async function(event, context) {
@@ -18,6 +23,7 @@ exports.registerUserWithPhoneNumber = async function(event, context) {
     event.user.userId,
     event.user.phoneNumber,
     event.user.displayName,
+    event.arguments.fcmToken,
   );
 };
 
@@ -26,6 +32,16 @@ exports.registerUserWithEmail = async function(event, context) {
     event.user.userId,
     event.user.email,
     event.user.displayName,
+    event.arguments.fcmToken,
+  );
+};
+
+exports.sendPushNotifications = async (event, context) => {
+  return api.sendPushNotifications(
+    event.arguments.conversationId,
+    event.arguments.sender,
+    event.arguments.message,
+    event.arguments.dryRun,
   );
 };
 

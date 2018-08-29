@@ -5,104 +5,115 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: postMessage
-      Handler: index.postMessage
+      Handler: src/index.postMessage
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
   getConversation:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: getConversation
-      Handler: index.getConversation
+      Handler: src/index.getConversation
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
+
+  sendPushNotifications:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: sendPushNotifications
+      Handler: src/index.sendPushNotifications
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref ZipFile
 
   updateUser:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: updateUser
-      Handler: index.updateUser
+      Handler: src/index.updateUser
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
   getConversationHistory:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: getConversationHistory
-      Handler: index.getConversationHistory
+      Handler: src/index.getConversationHistory
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
   initiateConversation:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: initiateConversation
-      Handler: index.initiateConversation
+      Handler: src/index.initiateConversation
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
   registerUserWithPhoneNumber:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: registerUserWithPhoneNumber
-      Handler: index.registerUserWithPhoneNumber
+      Handler: src/index.registerUserWithPhoneNumber
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
   registerUserWithEmail:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: registerUserWithEmail
-      Handler: index.registerUserWithEmail
+      Handler: src/index.registerUserWithEmail
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
 
   lookupUserByPhoneNumber:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: lookupUserByPhoneNumber
-      Handler: index.lookupUserByPhoneNumber
+      Handler: src/index.lookupUserByPhoneNumber
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
   lookupUserByEmail:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: lookupUserByEmail
-      Handler: index.lookupUserByEmail
+      Handler: src/index.lookupUserByEmail
       Runtime: nodejs8.10
       Role: !Ref LambdaRole
       CodeUri:
         Bucket: !Ref BucketName
-        Key: !Ref CodeKey
+        Key: !Ref ZipFile
 
 Parameters:
-  CodeKey:
+  ZipFile:
     Type: String
   BucketName:
     Type: String

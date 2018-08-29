@@ -1,4 +1,4 @@
-const api = require('../api.js');
+const api = require('../src/api.js');
 
 async function example() {
   const john = await api.registerUserWithEmail('UserId123456778967', 'john68769@example.com', 'John');
