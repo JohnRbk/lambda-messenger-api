@@ -13,6 +13,14 @@ AWS.config.update({
 
 const docClient = new AWS.DynamoDB.DocumentClient();
 
+/* Only log in production */
+function log(message) {
+  if (process.env.AWS_EXECUTION_ENV) {
+    /* eslint-disable-next-line no-console */
+    console.log(message);
+  }
+}
+
 /*
 
 Note how these fields are mapped to the JWT token:
@@ -277,7 +285,7 @@ async function sendPushNotifications(conversationId, sender, message, dryRun = f
     };
 
     const p = admin.messaging().send(pushNotification, dryRun).then((response) => {
-      console.log(`sent notification with response: ${response}`);
+      log(`sent notification with response: ${response}`);
     });
 
     promises.push(p);
@@ -287,7 +295,7 @@ async function sendPushNotifications(conversationId, sender, message, dryRun = f
   try {
     return Promise.all(promises);
   } catch (error) {
-    console.log(`Error sending push notifications: ${error}`);
+    log(`Error sending push notifications: ${error}`);
     return Promise.reject(error);
   } finally {
     admin.app().delete(); // Required, otherwise it hangs up the process
@@ -299,6 +307,8 @@ async function sendPushNotifications(conversationId, sender, message, dryRun = f
 * conversation.
 */
 async function postMessage(conversationId, sender, message, enablePushNotifications = false) {
+
+  log(`${sender} is posting a message to ${conversationId} with "${message}" and push notifications set to: ${enablePushNotifications}`);
 
   const timestamp = new Date().toISOString();
 
@@ -342,8 +352,12 @@ async function postMessage(conversationId, sender, message, enablePushNotificati
       }),
     };
 
-    // Sent async, due to InvocationType
-    await lambda.invoke(sendPushNotificationParams).promise();
+    try {
+      // Sent async, due to InvocationType
+      await lambda.invoke(sendPushNotificationParams).promise();
+    } catch (error) {
+      log(`Attempted to send push notifications but got an error ${error}`);
+    }
   }
 
   return docClient.put(params).promise().then(() => ({
@@ -360,6 +374,8 @@ async function postMessage(conversationId, sender, message, enablePushNotificati
 * the group to post messages to one another.
 */
 async function initiateConversation(userId, others) {
+
+  log(`${userId} is initiating a conversation with ${others}`);
 
   if (!userId) {
     return Promise.reject(Error('Invalid parameters to call initiateConversation'));
@@ -427,7 +443,53 @@ function validateEmail(email) {
   return re.test(String(email).toLowerCase());
 }
 
+async function updateUserInAllMessages(userId) {
+
+  log(`Updating user ${userId} in all their message history`);
+  const updatedUser = await getUser(userId);
+
+  const history = await getConversationHistory(userId);
+
+  const promises = [];
+  history.forEach((convo) => {
+
+    convo.messages.forEach((message) => {
+      const updateParams = {
+        TableName: 'messages',
+        Key: {
+          conversationId: message.conversationId,
+          timestamp: message.timestamp,
+        },
+        UpdateExpression: 'set sender = :u',
+        ConditionExpression: 'sender.userId = :me',
+        ExpressionAttributeValues: {
+          ':me': userId,
+          ':u': updatedUser,
+        },
+      };
+      const p = docClient.update(updateParams).promise()
+        .catch((error) => {
+          // its expected that we'll skip over users who are not the
+          // current user being updated
+          if (error.code !== 'ConditionalCheckFailedException') {
+            return Promise.reject(error);
+          }
+          return Promise.resolve();
+        });
+
+      promises.push(p);
+    });
+
+  });
+
+  log(`Will make ${promises.length} updates`);
+
+  return Promise.all(promises);
+}
+
 async function updateUser(userId, displayName = undefined, fcmToken = undefined) {
+  log(`Request to update ${userId} with displayName: ${displayName} and fcmToken: ${fcmToken}`);
+
   if (!userId || !(fcmToken || displayName)) {
     return Promise.reject(Error('Invalid parameters to call updateUser'));
   }
@@ -452,50 +514,82 @@ async function updateUser(userId, displayName = undefined, fcmToken = undefined)
       ':displayName': displayName,
       ':fcmToken': fcmToken,
     },
+    ReturnValues: 'ALL_NEW',
   };
 
-  await docClient.update(params).promise().catch((error) => {
-    if (error.code === 'ConditionalCheckFailedException') {
-      return Promise.reject(Error('User does not exist'));
-    }
-    return Promise.reject(error);
-  });
-
-  const updatedUser = await getUser(userId);
-
-  const history = await getConversationHistory(userId);
-
-  const promises = [];
-  history.forEach((convo) => {
-
-    convo.messages.forEach((message) => {
-      const updateParams = {
-        TableName: 'messages',
-        Key: {
-          conversationId: message.conversationId,
-          timestamp: message.timestamp,
-        },
-        UpdateExpression: 'set sender = :u',
-        ConditionExpression: 'sender.userId = :me',
-        ExpressionAttributeValues: {
-          ':me': userId,
-          ':u': updatedUser,
-        },
-      };
-      const p = docClient.update(updateParams).promise()
-        .catch((error) => {
-          if (error.code !== 'ConditionalCheckFailedException') {
-            return Promise.reject(error);
-          }
-          return Promise.resolve();
-        });
-
-      promises.push(p);
+  const updatedUser = await docClient.update(params).promise()
+    .then(data => data.Attributes)
+    .catch((error) => {
+      if (error.code === 'ConditionalCheckFailedException') {
+        return Promise.reject(Error('User does not exist'));
+      }
+      return Promise.reject(error);
     });
 
-  });
+  if (process.env.AWS_EXECUTION_ENV) {
+    log('Calling updateUserInAllMessagesParams as an async lambda function');
+    const lambda = new AWS.Lambda();
 
-  return Promise.all(promises).then(() => updatedUser);
+    const updateUserInAllMessagesParams = {
+      InvocationType: 'Event',
+      FunctionName: 'updateUserInAllMessages',
+      Payload: JSON.stringify({
+        user: {
+          userId,
+        },
+      }),
+    };
+
+    try {
+      // Sent async, due to InvocationType
+      await lambda.invoke(updateUserInAllMessagesParams).promise();
+    } catch (error) {
+      log(`Attempted to update user message history but got an error ${error}`);
+    }
+  } else {
+    log('Calling updateUserInAllMessagesParams directly');
+    await updateUserInAllMessages(userId);
+  }
+  //
+
+  log(`In updateUser, returning ${updatedUser}`);
+  return updatedUser;
+
+  // const updatedUser = await getUser(userId);
+  //
+  // const history = await getConversationHistory(userId);
+  //
+  // const promises = [];
+  // history.forEach((convo) => {
+  //
+  //   convo.messages.forEach((message) => {
+  //     const updateParams = {
+  //       TableName: 'messages',
+  //       Key: {
+  //         conversationId: message.conversationId,
+  //         timestamp: message.timestamp,
+  //       },
+  //       UpdateExpression: 'set sender = :u',
+  //       ConditionExpression: 'sender.userId = :me',
+  //       ExpressionAttributeValues: {
+  //         ':me': userId,
+  //         ':u': updatedUser,
+  //       },
+  //     };
+  //     const p = docClient.update(updateParams).promise()
+  //       .catch((error) => {
+  //         if (error.code !== 'ConditionalCheckFailedException') {
+  //           return Promise.reject(error);
+  //         }
+  //         return Promise.resolve();
+  //       });
+  //
+  //     promises.push(p);
+  //   });
+  //
+  // });
+  //
+  // return Promise.all(promises).then(() => updatedUser);
 
 }
 
@@ -622,6 +716,7 @@ async function registerUsers(users) {
 }
 
 module.exports = {
+  updateUserInAllMessages,
   sendPushNotifications,
   updateUser,
   existingConversationIdAmongstUsers,

@@ -12,11 +12,11 @@ type Message {
 }
 
 type Mutation {
-	registerUserWithPhoneNumber: User!
-	registerUserWithEmail: User!
-	postMessage(conversationId: String!, message: String!): Message!
+	registerUserWithPhoneNumber(fcmToken: String!): User!
+	registerUserWithEmail(fcmToken: String!): User!
+	postMessage(conversationId: String!, message: String!, sendPushNotifications: Boolean = false): Message!
 	initiateConversation(others: [String]): String!
-	updateUser(displayName: String!): User!
+	updateUser(displayName: String, fcmToken: String): User!
 }
 
 type Query {

@@ -66,7 +66,7 @@ function getAppsyncSchema() {
 function generateClientStubs() {
   getAppsyncSchema();
   run(
-    'aws-appsync-codegen generate config/posts.graphql --schema schema.json --output API.swift --target swift',
+    'npx aws-appsync-codegen generate config/posts.graphql --schema schema.json --output API.swift --target swift',
   );
 }
 

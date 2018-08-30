@@ -6,7 +6,13 @@ exports.postMessage = async function(event, context) {
     event.arguments.conversationId,
     event.user.userId,
     event.arguments.message,
-    true, /* enable push notifications */
+    event.arguments.sendPushNotifications, /* enable push notifications */
+  );
+};
+
+exports.updateUserInAllMessages = async function(event, context) {
+  return api.updateUserInAllMessages(
+    event.user.userId,
   );
 };
 

@@ -9,6 +9,44 @@ AWS.config.update({
 
 describe('Lambda tests', () => {
 
+  // Note that this API is called as a lambda async event within
+  // the updateUser lambda. When called as in the test case below
+  // it has no effect since the user has not been updated.
+  it('invokes updateUserInAllMessages function', async () => {
+    const lambda = new AWS.Lambda();
+
+    const u = utils.randomTestUser();
+
+    const registerUserParams = {
+      FunctionName: 'registerUserWithPhoneNumber',
+      Payload: JSON.stringify({
+        user: {
+          userId: u.userId,
+          phoneNumber: u.phoneNumber,
+          displayName: u.displayName,
+        },
+        arguments: {
+          fcmCode: '12345',
+        },
+      }),
+    };
+
+    await lambda.invoke(registerUserParams).promise();
+
+    const updateUserInAllMessagesParams = {
+      FunctionName: 'updateUserInAllMessages',
+      Payload: JSON.stringify({
+        user: {
+          userId: u.userId,
+        },
+      }),
+    };
+
+    const response = await lambda.invoke(updateUserInAllMessagesParams).promise();
+
+  });
+
+
   // Its expected this will fail in a test environment since the
   // fcmToken is not an actual device token.
   it('can invoke the pushNotification lambda', async() => {
@@ -153,7 +191,7 @@ describe('Lambda tests', () => {
     mlog.log('Posting a message');
     const postData = await lambda.invoke(postMessageParams).promise();
     const postedMessage = JSON.parse(postData.Payload);
-    console.log(postData);
+
     assert.equal('hello', postedMessage.message);
     assert.equal(u1.userId, postedMessage.sender.userId);
     assert.equal(u1.displayName, postedMessage.sender.displayName);
@@ -195,7 +233,7 @@ describe('Lambda tests', () => {
 
     mlog.log('Updating the user displayName');
     const updateUserData = await lambda.invoke(updateUserParams).promise();
-
+    console.log(updateUserData);
     assert.equal(200, updateUserData.StatusCode);
     const updatedUser = JSON.parse(updateUserData.Payload);
     assert.equal('Superman', updatedUser.displayName);

@@ -34,6 +34,17 @@ Resources:
         Bucket: !Ref BucketName
         Key: !Ref ZipFile
 
+  updateUserInAllMessages:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: updateUserInAllMessages
+      Handler: src/index.updateUserInAllMessages
+      Runtime: nodejs8.10
+      Role: !Ref LambdaRole
+      CodeUri:
+        Bucket: !Ref BucketName
+        Key: !Ref ZipFile
+
   updateUser:
     Type: 'AWS::Serverless::Function'
     Properties:

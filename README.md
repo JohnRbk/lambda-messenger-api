@@ -1,56 +1,44 @@
-# LambdaMessenger
+# Lambda Messenger API
+<img src="docs/images/lamb-launchscreen.png" alt="lamb" width="100"/>
 
-LambdaMessenger is a prototype for a serverless chat app using AWS AppSync, Node.js Lambda Functions, and DynamoDB. It works with the [LambdaMessenger iOS app](https://github.com/JohnRbk/lambda-messenger-ios).
+LambdaMessenger is a prototype for a serverless chat app using AWS AppSync, Node.js Lambda Functions, and DynamoDB. It was developed in an effort to evaluate [AWS AppSync](https://aws.amazon.com/appsync/).
 
-The programming model is fairly simple:
+Check out the [LambdaMessenger iOS app](https://github.com/JohnRbk/lambda-messenger-ios) which uses these APIs.
 
-1. Users can register with an email or phone number (via [Firebase Authentication](https://firebase.google.com/docs/auth/))
-2. Users can initiate a conversation with someone else
-3. Users can post messages to the conversation. All other participants of that conversation can retrieve updates via the `getConversation` API or in realtime using [GraphQL Subscriptions](https://docs.aws.amazon.com/appsync/latest/devguide/real-time-data.html).
+Here is how the API works:
+
+Register a user with the [Firebase Authentication](https://firebase.google.com/docs/auth/) API:
 
 ```javascript
+const auth = firebase.auth();
+auth.createUserWithEmailAndPassword(email, password)
+auth.signInWithEmailAndPassword(email, password)
+```
 
-// Register two users (the ID should come from FirebaseAuth)
-const john = await api.registerUserWithEmail('user-id-1', 'john@example.com', 'John');
-const anthony = await api.registerUserWithEmail('user-id-2', 'anthony@example.com', 'Anthony');
+Save the user in DynamoDB:
 
-// Start a conversation with one or more users
+```javascript
+const john = await api.registerUserWithEmail(userId, email, displayName);
+const anthony = await api.registerUserWithEmail(userId, email, displayName);
+```
+
+Start up a conversation with other users:
+
+```javascript
 const conversationId = await api.initiateConversation(john.userId, [anthony.userId])
-
-// Post messages to one another
-await api.postMessage(anthony.userId, 'Hey John')
-await api.postMessage(john.userId, 'Hi')
-
-// Get the conversation log
-await api.getConversation(conversationId, anthony.userId)
-// [ { conversationId: '1234', messages: [ {'Hey John'}, {'Hi'}] } ]
-
 ```
 
-Using GraphQL Subscriptions, messages can be retrieved realtime
+Send a message to other users. By default, this will also send an push notification to the users in the conversation if they have a device token saved in their profile:
 
 ```javascript
-
-const subscription = gql`
-      subscription newMessage{
-        newMessage(conversationId: "${conversationId}") {
-          message,sender,timestamp,conversationId
-        }
-      }`;
-
-const sub = await client.subscribe({ query: subscription });
-
-const realtimeResults = function realtimeResults(result) {
-  console.log('Received a new message!');
-};
-
-sub.close();
-
+await api.postMessage(conversationId, john.userId, 'Hello')
 ```
+
+Using [GraphQL Subscriptions](https://docs.aws.amazon.com/appsync/latest/devguide/real-time-data.html), messages can be retrieved realtime. See [this unit test](https://github.com/JohnRbk/lambda-messenger-api/blob/master/tests/appsyncSubscriptionTests.js) for an example of how to set up subscriptions.
 
 ## Getting Started
 
-LambdaMessenger is fully serverless, so a number of configuration steps are needed for AWS and Firebase.
+LambdaMessenger is fully serverless, so a number of configuration steps are needed for AWS and Firebase to host the APIs.
 
 ### Prerequisities
 
@@ -85,8 +73,9 @@ The main settings for this project need to be specified in the `config/config.js
 After Firebase and AWS are configured, the AppSync APIs can be tested using:
 
 ```bash
-npx runjs tests # runs all the unit tests
-npx runjs all # installs (or updates) the AWS lambda functions
+npx runjs test tests/apiTests.js # run local tests
+npx runjs all && npm install && npm rebuild # Deploys everything
+npx runjs tests # runs all tests, including integration tests
 ```
 
 ⚠️ After runnning `npx runjs all`, you'll need to re-run `npm install` since the packaging process removes dev dependencies from node_modules

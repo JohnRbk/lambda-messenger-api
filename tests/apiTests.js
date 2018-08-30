@@ -5,6 +5,72 @@ const utils = require('./testUtils.js');
 
 describe('API Unit Tests', () => {
 
+  it('can update an fcmToken', async() => {
+    const u = utils.randomTestUser();
+
+    const user = await api.registerUserWithPhoneNumber(
+      u.userId, u.phoneNumber, u.displayName, u.fcmToken,
+    );
+    const updatedUser = await api.updateUser(user.userId, undefined, '56789');
+    assert.equal(u.userId, updatedUser.userId);
+    assert.equal(u.displayName, updatedUser.displayName);
+    assert.equal(u.phoneNumber, updatedUser.phoneNumber);
+    assert.equal('56789', updatedUser.fcmToken);
+    const foundUser = await api.getUser(user.userId);
+    assert.equal(u.displayName, foundUser.displayName);
+    assert.equal(u.phoneNumber, foundUser.phoneNumber);
+    assert.equal('56789', foundUser.fcmToken);
+
+  });
+
+  it('can update both an fcmToken and name', async() => {
+    const u = utils.randomTestUser();
+
+    const user = await api.registerUserWithPhoneNumber(u.userId, u.phoneNumber, u.displayName, u.fcmToken);
+    await api.updateUser(user.userId, 'Austin', '56789');
+    const foundUser = await api.getUser(user.userId);
+    assert.equal('Austin', foundUser.displayName);
+    assert.equal(u.phoneNumber, foundUser.phoneNumber);
+    assert.equal('56789', foundUser.fcmToken);
+
+  });
+
+  it('can handle errors when updating a displayName', async() => {
+
+    let raisedException = false;
+    try {
+      await api.updateUser(uuidv1(), 'Austin');
+    } catch (error) {
+      assert.equal('User does not exist', error.message);
+      raisedException = true;
+    }
+    assert(raisedException);
+
+  });
+
+
+  it('can update a displayName in older messages', async() => {
+    const u1 = utils.randomTestUser();
+    const u2 = utils.randomTestUser();
+    await api.registerUsers([u1, u2]);
+
+    const cid = await api.initiateConversation(u1.userId, [u2.userId]);
+
+    await api.postMessage(cid, u1.userId, 'hi');
+    await api.postMessage(cid, u2.userId, 'hey');
+    const c1 = await api.getConversation(cid, u1.userId);
+
+    assert.equal(u1.displayName, c1.messages[0].sender.displayName);
+    assert.equal(u1.phoneNumber, c1.messages[0].sender.phoneNumber);
+    assert.equal(u2.displayName, c1.messages[1].sender.displayName);
+
+    await api.updateUser(u1.userId, 'Anne');
+
+    const c2 = await api.getConversation(cid, u1.userId);
+    assert.equal('Anne', c2.messages[0].sender.displayName);
+    assert.equal(u2.displayName, c1.messages[1].sender.displayName);
+    assert.equal(u2.phoneNumber, c1.messages[1].sender.phoneNumber);
+  });
 
   /* This will always throw an error since Firebase expects an actual FCMToken,
    * even when dryRun is enabled */
@@ -75,67 +141,6 @@ describe('API Unit Tests', () => {
     assert.equal(u.phoneNumber, foundUser.phoneNumber);
     assert.equal(u.fcmToken, foundUser.fcmToken);
 
-  });
-
-  it('can update an fcmToken', async() => {
-    const u = utils.randomTestUser();
-
-    const user = await api.registerUserWithPhoneNumber(u.userId, u.phoneNumber, u.displayName, u.fcmToken);
-    await api.updateUser(user.userId, undefined, '56789');
-    const foundUser = await api.getUser(user.userId);
-    assert.equal(u.displayName, foundUser.displayName);
-    assert.equal(u.phoneNumber, foundUser.phoneNumber);
-    assert.equal('56789', foundUser.fcmToken);
-
-  });
-
-  it('can update both an fcmToken and name', async() => {
-    const u = utils.randomTestUser();
-
-    const user = await api.registerUserWithPhoneNumber(u.userId, u.phoneNumber, u.displayName, u.fcmToken);
-    await api.updateUser(user.userId, 'Austin', '56789');
-    const foundUser = await api.getUser(user.userId);
-    assert.equal('Austin', foundUser.displayName);
-    assert.equal(u.phoneNumber, foundUser.phoneNumber);
-    assert.equal('56789', foundUser.fcmToken);
-
-  });
-
-  it('can handle errors when updating a displayName', async() => {
-
-    let raisedException = false;
-    try {
-      await api.updateUser(uuidv1(), 'Austin');
-    } catch (error) {
-      assert.equal('User does not exist', error.message);
-      raisedException = true;
-    }
-    assert(raisedException);
-
-  });
-
-
-  it('can update a displayName in older messages', async() => {
-    const u1 = utils.randomTestUser();
-    const u2 = utils.randomTestUser();
-    await api.registerUsers([u1, u2]);
-
-    const cid = await api.initiateConversation(u1.userId, [u2.userId]);
-
-    await api.postMessage(cid, u1.userId, 'hi');
-    await api.postMessage(cid, u2.userId, 'hey');
-    const c1 = await api.getConversation(cid, u1.userId);
-
-    assert.equal(u1.displayName, c1.messages[0].sender.displayName);
-    assert.equal(u1.phoneNumber, c1.messages[0].sender.phoneNumber);
-    assert.equal(u2.displayName, c1.messages[1].sender.displayName);
-
-    await api.updateUser(u1.userId, 'Anne');
-
-    const c2 = await api.getConversation(cid, u1.userId);
-    assert.equal('Anne', c2.messages[0].sender.displayName);
-    assert.equal(u2.displayName, c1.messages[1].sender.displayName);
-    assert.equal(u2.phoneNumber, c1.messages[1].sender.phoneNumber);
   });
 
   it('can not start a conversation with yourself', async() => {

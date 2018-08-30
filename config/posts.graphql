@@ -39,8 +39,11 @@ mutation registerUserWithPhoneNumber($fcmToken: String!){
   }
 }
 
-mutation postMessage($conversationId: String!, $message: String!) {
-	postMessage(conversationId: $conversationId, message: $message){
+mutation postMessage($conversationId: String!, $message: String!, $sendPushNotifications: Boolean = false) {
+	postMessage(
+    conversationId: $conversationId,
+    message: $message,
+    sendPushNotifications: $sendPushNotifications){
 		...messageFields
 	}
 }
