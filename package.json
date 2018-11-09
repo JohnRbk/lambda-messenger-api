@@ -13,14 +13,14 @@
   "author": "JohnRbk",
   "license": "ISC",
   "dependencies": {
-    "firebase-admin": "^6.0.0",
-    "libphonenumber-js": "^1.4.2",
+    "firebase-admin": "^6.1.0",
+    "libphonenumber-js": "^1.6.4",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
     "aws-appsync": "1.3.3",
     "aws-appsync-codegen": "^0.17.5",
-    "aws-sdk": "^2.286.2",
+    "aws-sdk": "^2.348.0",
     "axios": "^0.18.0",
     "eslint": "^4.19.1",
     "eslint-config-airbnb-base": "^13.0.0",
@@ -29,15 +29,15 @@
     "eslint-plugin-node": "^7.0.1",
     "eslint-plugin-promise": "^3.8.0",
     "eslint-plugin-standard": "^3.1.0",
-    "firebase": "^5.4.1",
-    "graphql-tag": "^2.9.2",
+    "firebase": "^5.5.7",
+    "graphql-tag": "^2.10.0",
     "isomorphic-fetch": "^2.2.1",
     "mocha": "^5.2.0",
     "mocha-logger": "^1.0.6",
     "nyc": "^12.0.2",
     "runjs": "^4.3.2",
-    "websocket": "^1.0.26",
-    "ws": "^6.0.0",
-    "yargs": "^12.0.1"
+    "websocket": "^1.0.28",
+    "ws": "^6.1.0",
+    "yargs": "^12.0.2"
   }
 }
